@@ -1,0 +1,25 @@
+[project]
+name = "tomoko-research-operator"
+version = "0.1.0"
+description = "Local Perplexity research operator for Tomoko"
+requires-python = ">=3.11"
+dependencies = [
+  "websocket-client>=1.8.0",
+]
+
+[project.scripts]
+tomoko-research = "tomoko_research_operator.cli:main"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.6.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
