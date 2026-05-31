@@ -72,8 +72,10 @@ change automation behavior.
 The operator should:
 
 - Connect only to `127.0.0.1`.
-- Prefer a tab whose URL starts with `https://www.perplexity.ai/`.
-- Create or navigate a tab when needed.
+- Create a fresh Perplexity tab for each request by default.
+- Reuse a tab only when explicitly configured for debugging.
+- Activate the selected tab before opening a websocket session.
+- Wait for the page and composer to be ready before inserting the prompt.
 - Record page URL and title in every artifact.
 - Capture enough raw HTML/text to debug selector drift.
 
@@ -86,6 +88,9 @@ Perplexity UI completion is not a protocol event. Treat completion as a heuristi
 - minimum non-empty response length is reached.
 
 If these disagree, return `timeout` or `needs_human`, not partial success.
+
+The current implementation also treats login, captcha, blocked, and rate-limit
+markers as `needs_human`.
 
 ## MCP Shape
 
@@ -113,4 +118,3 @@ Raw browser artifacts are debugging records, not Tomoko memory.
 - Do not commit real artifacts.
 - Redact or avoid private account/user data where practical.
 - Return only artifact paths and structured excerpts to callers.
-

@@ -5,6 +5,10 @@ This repository is a local research operator for Tomoko.
 It controls a logged-in Chrome/Chromium tab through the Chrome DevTools Protocol
 and exposes a small MCP-style research capability to Tomoko. It is intentionally
 separate from the Tomoko runtime repository.
+## 参照
+
+`reference`ディレクトリ内のプログラムは参考にして良いがコピペや直接のimportは禁止する。
+参考実装として参照すること。
 
 ## Hard Boundaries
 

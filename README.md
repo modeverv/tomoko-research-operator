@@ -75,9 +75,17 @@ deterministic rules:
 The operator does not decide when Tomoko should speak. It only reports
 `completed`, `failed`, or `needs_human`.
 
+Local stdio server:
+
+```bash
+uv run tomoko-research-mcp
+```
+
+The server exposes one tool, `research.search`, with the same fields as the CLI:
+`query`, `mode`, `locale`, and `recency`.
+
 ## License Note
 
 This project may study `chatgpt-el` behavior and selectors, but it does not copy
 its GPL implementation. Keep this repository's implementation original unless
 you intentionally change this repository's licensing posture.
-

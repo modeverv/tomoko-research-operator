@@ -2,19 +2,10 @@ from __future__ import annotations
 
 import argparse
 import json
-from dataclasses import asdict, is_dataclass
-from datetime import datetime
-from typing import Any
 
-from tomoko_research_operator.models import ResearchRequest, ResearchResult
-
-
-def _json_default(value: Any) -> Any:
-    if isinstance(value, datetime):
-        return value.isoformat()
-    if is_dataclass(value) and not isinstance(value, type):
-        return asdict(value)
-    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
+from tomoko_research_operator.artifacts import json_default
+from tomoko_research_operator.models import ResearchRequest
+from tomoko_research_operator.perplexity import PerplexityProviderConfig, PerplexityResearchProvider
 
 
 def main() -> None:
@@ -26,6 +17,9 @@ def main() -> None:
     search.add_argument("--mode", choices=["quick", "deep"], default="quick")
     search.add_argument("--locale", default="ja-JP")
     search.add_argument("--recency")
+    search.add_argument("--debug-port", type=int, default=9000)
+    search.add_argument("--timeout-sec", type=float, default=90.0)
+    search.add_argument("--artifacts-dir", default="artifacts")
 
     args = parser.parse_args()
     if args.command == "search":
@@ -36,14 +30,16 @@ def main() -> None:
             recency=args.recency,
         )
         request.validate()
-        result = ResearchResult.failed(
-            request.normalized_query(),
-            "browser automation is not implemented yet",
-            status="needs_human",
+        provider = PerplexityResearchProvider(
+            config=PerplexityProviderConfig(
+                debug_port=args.debug_port,
+                response_timeout_sec=args.timeout_sec,
+                artifacts_dir=args.artifacts_dir,
+            )
         )
-        print(json.dumps(result, default=_json_default, ensure_ascii=False))
+        result = provider.search(request)
+        print(json.dumps(result, default=json_default, ensure_ascii=False))
 
 
 if __name__ == "__main__":
     main()
-

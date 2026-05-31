@@ -6,7 +6,9 @@ from tomoko_research_operator.models import ResearchRequest, ResearchResult
 from tomoko_research_operator.perplexity import (
     ExtractedPerplexityResponse,
     build_prompt,
+    classify_needs_human,
     result_from_extracted,
+    snapshot_from_payload,
 )
 
 
@@ -18,6 +20,11 @@ def test_research_request_normalizes_query() -> None:
 def test_research_request_rejects_empty_query() -> None:
     with pytest.raises(ValueError, match="query"):
         ResearchRequest(query="   ").validate()
+
+
+def test_research_request_rejects_unknown_mode() -> None:
+    with pytest.raises(ValueError, match="mode"):
+        ResearchRequest(query="x", mode="slow").validate()  # type: ignore[arg-type]
 
 
 def test_failed_result_must_use_failure_status() -> None:
@@ -41,3 +48,30 @@ def test_result_from_extracted_creates_speakable_completed_result() -> None:
     assert result.bullets == ("根拠1", "根拠2")
     assert result.is_speakable()
 
+
+def test_classify_needs_human_detects_login_and_captcha() -> None:
+    assert classify_needs_human("https://www.perplexity.ai/", "Please sign in") == "login required"
+    assert (
+        classify_needs_human("https://www.perplexity.ai/", "Verify you are human")
+        == "captcha or verification"
+    )
+
+
+def test_snapshot_from_payload_extracts_citations_and_blocked_state() -> None:
+    snapshot = snapshot_from_payload(
+        {
+            "url": "https://www.perplexity.ai/",
+            "title": "Perplexity",
+            "text": "Access denied",
+            "html": "<main>Access denied</main>",
+            "isGenerating": False,
+            "citations": [
+                {"title": "Example", "url": "https://example.com/page", "host": "example.com"},
+                {"title": "No URL"},
+            ],
+        }
+    )
+
+    assert snapshot.needs_human_reason == "blocked by provider"
+    assert len(snapshot.citations) == 1
+    assert snapshot.citations[0].url == "https://example.com/page"

@@ -21,6 +21,8 @@ class ResearchRequest:
     def validate(self) -> None:
         if not self.normalized_query():
             raise ValueError("query must not be empty")
+        if self.mode not in {"quick", "deep"}:
+            raise ValueError("mode must be quick or deep")
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,4 +54,3 @@ class ResearchResult:
 
     def is_speakable(self) -> bool:
         return self.status == "completed" and bool(self.short_answer.strip())
-
