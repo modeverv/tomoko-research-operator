@@ -31,6 +31,7 @@
 - [x] Expose `research.search` through a real MCP server.
 - [x] Preserve the same `ResearchRequest` / `ResearchResult` DTO.
 - [x] Add a JSON CLI wrapper for local smoke.
+- [x] Preserve full provider text in `ResearchResult.full_text`.
 - [ ] Document Tomoko integration contract.
 
 ## Phase 4: Tomoko Integration Plan

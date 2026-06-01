@@ -1,5 +1,28 @@
 # LOG.md
 
+## 2026-06-01 Session 1
+
+### Planned
+
+- Stop losing the provider response after the first speakable line.
+- Keep the existing `short_answer` behavior while carrying full text across the
+  operator DTO and MCP response.
+
+### Done
+
+- Added `ResearchResult.full_text`.
+- Populated `full_text` from the extracted Perplexity response.
+- Added unit coverage that model shaping and MCP structured output include
+  `full_text`.
+- Updated architecture and repo memory docs for the new DTO contract.
+
+### Verification
+
+- `mise x python@3.14 uv@0.11.16 -- uv run pytest`
+  - 18 passed
+- `mise x python@3.14 uv@0.11.16 -- uv run ruff check .`
+  - pass
+
 ## 2026-05-31 Session 1
 
 ### Planned

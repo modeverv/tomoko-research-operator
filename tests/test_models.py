@@ -45,6 +45,7 @@ def test_result_from_extracted_creates_speakable_completed_result() -> None:
     )
     assert result.status == "completed"
     assert result.short_answer == "結論です。"
+    assert result.full_text == "結論です。\n- 根拠1\n- 根拠2"
     assert result.bullets == ("根拠1", "根拠2")
     assert result.is_speakable()
 

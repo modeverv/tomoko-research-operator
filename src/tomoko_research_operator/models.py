@@ -38,6 +38,7 @@ class ResearchResult:
     query: str
     provider: str = "perplexity"
     short_answer: str = ""
+    full_text: str = ""
     bullets: tuple[str, ...] = ()
     citations: tuple[Citation, ...] = ()
     confidence: float | None = None

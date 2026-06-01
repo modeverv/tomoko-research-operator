@@ -35,6 +35,7 @@ This project returns:
 - Query metadata.
 - Result status.
 - Short answer.
+- Full provider text.
 - Bullet points.
 - Citations.
 - Provider trace id.

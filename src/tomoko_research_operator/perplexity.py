@@ -124,6 +124,7 @@ def result_from_extracted(
         status="completed",
         query=request.normalized_query(),
         short_answer=short_answer,
+        full_text=text,
         bullets=bullets,
         citations=extracted.citations,
         confidence=0.7,

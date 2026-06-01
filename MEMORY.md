@@ -25,6 +25,12 @@ files are GPLv3-or-later. This project starts as an original implementation.
 `PerplexityResearchProvider` so smoke behavior and the eventual MCP boundary do
 not drift.
 
+### Preserve full provider text at the operator boundary
+
+`ResearchResult.short_answer` is for short speakable previews. The operator
+should also return `ResearchResult.full_text` so downstream Tomoko code can
+store or summarize the complete provider response without reading raw artifacts.
+
 ### Wait for Perplexity composer readiness
 
 Perplexity can expose the contenteditable input before the submit button is
