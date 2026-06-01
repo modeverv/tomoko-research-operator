@@ -30,6 +30,8 @@ not drift.
 `ResearchResult.short_answer` is for short speakable previews. The operator
 should also return `ResearchResult.full_text` so downstream Tomoko code can
 store or summarize the complete provider response without reading raw artifacts.
+Provider source appendices such as trailing `出典:` sections should be stripped
+from `full_text`; URLs belong in structured `citations` and raw artifacts.
 
 ### Wait for Perplexity composer readiness
 

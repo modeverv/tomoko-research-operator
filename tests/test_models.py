@@ -50,6 +50,25 @@ def test_result_from_extracted_creates_speakable_completed_result() -> None:
     assert result.is_speakable()
 
 
+def test_result_from_extracted_strips_trailing_source_section() -> None:
+    result = result_from_extracted(
+        ResearchRequest(query="調べて"),
+        ExtractedPerplexityResponse(
+            text=(
+                "結論です。\n"
+                "詳しい本文です。\n\n"
+                "出典：\n"
+                "ロイター：https://example.com/reuters\n"
+                "日経：https://example.com/nikkei"
+            )
+        ),
+    )
+
+    assert result.short_answer == "結論です。"
+    assert result.full_text == "結論です。\n詳しい本文です。"
+    assert "出典" not in result.full_text
+
+
 def test_classify_needs_human_detects_login_and_captcha() -> None:
     assert classify_needs_human("https://www.perplexity.ai/", "Please sign in") == "login required"
     assert (

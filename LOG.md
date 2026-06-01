@@ -23,6 +23,28 @@
 - `mise x python@3.14 uv@0.11.16 -- uv run ruff check .`
   - pass
 
+## 2026-06-01 Session 2
+
+### Planned
+
+- Remove provider-generated trailing source appendices from answer text while
+  keeping structured citations.
+
+### Done
+
+- Added deterministic stripping for trailing `出典:` / `出典：` sections before
+  populating `short_answer`, `full_text`, and bullets.
+- Added unit coverage for source-section stripping.
+- Updated architecture and repo memory notes to clarify that citations remain
+  structured data.
+
+### Verification
+
+- `mise x python@3.14 uv@0.11.16 -- uv run pytest`
+  - 19 passed
+- `mise x python@3.14 uv@0.11.16 -- uv run ruff check .`
+  - pass
+
 ## 2026-05-31 Session 1
 
 ### Planned

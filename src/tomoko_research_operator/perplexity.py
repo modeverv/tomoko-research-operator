@@ -115,7 +115,7 @@ def result_from_extracted(
     provider_trace_id: str | None = None,
     raw_artifact_path: str | None = None,
 ) -> ResearchResult:
-    text = extracted.text.strip()
+    text = _strip_trailing_source_section(extracted.text).strip()
     if not text:
         return ResearchResult.failed(request.normalized_query(), "empty response", status="failed")
     bullets = tuple(line.strip("- ").strip() for line in text.splitlines() if line.strip().startswith("- "))
@@ -131,6 +131,15 @@ def result_from_extracted(
         provider_trace_id=provider_trace_id,
         raw_artifact_path=raw_artifact_path,
     )
+
+
+def _strip_trailing_source_section(text: str) -> str:
+    lines = text.strip().splitlines()
+    source_headings = {"出典:", "出典：", "Sources:", "Sources："}
+    for index, line in enumerate(lines):
+        if line.strip() in source_headings:
+            return "\n".join(lines[:index]).rstrip()
+    return text.strip()
 
 
 class PerplexityResearchProvider:
