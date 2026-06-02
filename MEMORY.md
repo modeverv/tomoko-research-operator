@@ -31,7 +31,9 @@ not drift.
 should also return `ResearchResult.full_text` so downstream Tomoko code can
 store or summarize the complete provider response without reading raw artifacts.
 Provider source appendices such as trailing `出典:` sections should be stripped
-from `full_text`; URLs belong in structured `citations` and raw artifacts.
+from `full_text`; inline citation-chip text such as `maff.go +1` should also be
+removed from cleaned answer text. Inline URLs should not be part of speakable
+text; URLs belong in structured `citations` and raw artifacts.
 
 ### Wait for Perplexity composer readiness
 

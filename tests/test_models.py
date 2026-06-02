@@ -69,6 +69,37 @@ def test_result_from_extracted_strips_trailing_source_section() -> None:
     assert "出典" not in result.full_text
 
 
+def test_result_from_extracted_strips_inline_citation_chips_and_source_tail() -> None:
+    result = result_from_extracted(
+        ResearchRequest(query="食料自給率"),
+        ExtractedPerplexityResponse(
+            text=(
+                "日本の食料自給率は38％です 。 maff.go +1\n"
+                "主な数値\n"
+                "カロリーベース食料自給率 38％ 並み maff.go\n"
+                "農林水産省のページ https://www.maff.go.jp/j/press/kanbo/anpo/251010.html\n"
+                "コメ価格高騰で生産額ベースは上昇した mainichi +1\n"
+                "政府の2030年度目標は45％だが、未達です sankei +1\n"
+                "出典 農林水産省「令和6年度食料自給率」: https://www.maff.go.jp/example"
+            )
+        ),
+    )
+
+    assert result.full_text == (
+        "日本の食料自給率は38％です。\n"
+        "主な数値\n"
+        "カロリーベース食料自給率 38％ 並み\n"
+        "農林水産省のページ\n"
+        "コメ価格高騰で生産額ベースは上昇した\n"
+        "政府の2030年度目標は45％だが、未達です"
+    )
+    assert "maff.go" not in result.full_text
+    assert "mainichi +1" not in result.full_text
+    assert "sankei +1" not in result.full_text
+    assert "https://www.maff.go.jp/j/press/kanbo/anpo/251010.html" not in result.full_text
+    assert "https://www.maff.go.jp/example" not in result.full_text
+
+
 def test_classify_needs_human_detects_login_and_captcha() -> None:
     assert classify_needs_human("https://www.perplexity.ai/", "Please sign in") == "login required"
     assert (

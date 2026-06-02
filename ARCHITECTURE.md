@@ -35,7 +35,8 @@ This project returns:
 - Query metadata.
 - Result status.
 - Short answer.
-- Full provider answer text, with provider source appendices removed.
+- Full provider answer text, with provider source appendices and citation-chip
+  text removed. Inline URLs are also removed from speakable text.
 - Bullet points.
 - Citations.
 - Provider trace id.

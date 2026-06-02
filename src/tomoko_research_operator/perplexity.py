@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -115,7 +116,7 @@ def result_from_extracted(
     provider_trace_id: str | None = None,
     raw_artifact_path: str | None = None,
 ) -> ResearchResult:
-    text = _strip_trailing_source_section(extracted.text).strip()
+    text = _clean_answer_text(extracted.text)
     if not text:
         return ResearchResult.failed(request.normalized_query(), "empty response", status="failed")
     bullets = tuple(line.strip("- ").strip() for line in text.splitlines() if line.strip().startswith("- "))
@@ -133,13 +134,41 @@ def result_from_extracted(
     )
 
 
+def _clean_answer_text(text: str) -> str:
+    text = _strip_trailing_source_section(text)
+    text = _strip_inline_urls(text)
+    text = _strip_inline_citation_chips(text)
+    return text.strip()
+
+
 def _strip_trailing_source_section(text: str) -> str:
     lines = text.strip().splitlines()
-    source_headings = {"出典:", "出典：", "Sources:", "Sources："}
+    source_headings = {"出典", "出典:", "出典：", "Sources", "Sources:", "Sources："}
     for index, line in enumerate(lines):
-        if line.strip() in source_headings:
+        stripped = line.strip()
+        if stripped in source_headings or stripped.startswith(("出典 ", "Sources ")):
             return "\n".join(lines[:index]).rstrip()
     return text.strip()
+
+
+def _strip_inline_citation_chips(text: str) -> str:
+    # Perplexity can leak visual citation chips into extracted text, e.g. "maff.go +1".
+    citation_chip = re.compile(
+        r"(?<![A-Za-z0-9_./:-])"
+        r"(?:[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)+(?:\s*\+\d+)?|[a-z][a-z0-9-]{2,}\s+\+\d+)"
+        r"(?![A-Za-z0-9_./:-])"
+    )
+    text = citation_chip.sub("", text)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    text = re.sub(r"[ \t]+([、。，．,.;:：])", r"\1", text)
+    return "\n".join(line.rstrip() for line in text.splitlines())
+
+
+def _strip_inline_urls(text: str) -> str:
+    text = re.sub(r"https?://\S+", "", text)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    text = re.sub(r"[ \t]+([、。，．,.;:：])", r"\1", text)
+    return "\n".join(line.rstrip() for line in text.splitlines())
 
 
 class PerplexityResearchProvider:

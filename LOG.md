@@ -1,5 +1,31 @@
 # LOG.md
 
+## 2026-06-02 Session 1
+
+### Planned
+
+- Remove Perplexity citation-chip text such as `maff.go +1` and inline URLs
+  from cleaned answer text.
+- Keep trailing source appendices out of `full_text` even when the heading is
+  written as `出典 ...` on the same line.
+
+### Done
+
+- Added a shared answer-text cleaning step before `short_answer`, `full_text`,
+  and bullets are derived.
+- Added deterministic stripping for inline lowercase citation chips such as
+  `maff.go`, `mainichi +1`, and `sankei +1`.
+- Added deterministic stripping for inline `http` / `https` URLs before
+  speakable text is derived.
+- Added unit coverage using a food-self-sufficiency style answer sample.
+
+### Verification
+
+- `mise x python@3.14 uv@0.11.16 -- uv run pytest`
+  - 20 passed
+- `mise x python@3.14 uv@0.11.16 -- uv run ruff check .`
+  - pass
+
 ## 2026-06-01 Session 1
 
 ### Planned
