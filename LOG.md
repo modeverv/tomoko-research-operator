@@ -1,5 +1,33 @@
 # LOG.md
 
+## 2026-07-11 Session 1
+
+### Done
+
+- Added `ChatGPTResearchProvider` as the default local Chrome backend.
+- Kept Perplexity selectable with `--provider perplexity` or
+  `TOMOKO_RESEARCH_PROVIDER=perplexity`.
+- Added a shared prompt contract for read-aloud-friendly answers: no URLs or
+  source labels in the spoken body, plus a "what happened / why it matters"
+  structure for multi-item answers.
+- Kept ChatGPT DOM selectors and completion detection isolated in `chatgpt.py`.
+
+### Manual Smoke
+
+- Connected to the dedicated Chrome CDP endpoint on `127.0.0.1:9000`.
+- Ran the default `tomoko-research search` path against a logged-in ChatGPT
+  session for a current Japan-news query.
+- Result: `status="completed"`, `provider="chatgpt"`; the answer completed,
+  produced a speakable summary, and returned structured source URLs.
+- Raw artifact was written under `/tmp/tomoko-chatgpt-smoke-2/` and was not
+  added to the repository.
+
+### Verification
+
+- `uv run pytest` — 31 passed
+- `uv run ruff check .` — pass
+- `git diff --check` — pass
+
 ## 2026-06-02 Session 1
 
 ### Planned
@@ -24,6 +52,29 @@
 - `mise x python@3.14 uv@0.11.16 -- uv run pytest`
   - 20 passed
 - `mise x python@3.14 uv@0.11.16 -- uv run ruff check .`
+  - pass
+
+## 2026-06-05 Session 3
+
+### Planned
+
+- Extend world-observation Perplexity response waiting for long generations.
+- Avoid treating provider-block text as needs-human while Perplexity is still generating.
+
+### Done
+
+- Changed the world-observation provider timeout default from 240 seconds to 600 seconds.
+- Kept `TOMOKO_WORLD_OBSERVATION_PROVIDER_TIMEOUT_SEC` as the override knob.
+- Deferred `classify_needs_human()` while `isGenerating=true`, so long answers that mention `blocked` do not become `needs_human` before generation settles.
+- Added focused tests for the 600-second default and generating-state block deferral.
+
+### Verification
+
+- `uv run pytest tests/test_mcp_server.py tests/test_models.py -q`
+  - 20 passed
+- `uv run ruff check src/tomoko_research_operator/mcp_server.py src/tomoko_research_operator/perplexity.py tests/test_mcp_server.py tests/test_models.py`
+  - pass
+- `git diff --check`
   - pass
 
 ## 2026-06-01 Session 1
@@ -69,6 +120,28 @@
 - `mise x python@3.14 uv@0.11.16 -- uv run pytest`
   - 19 passed
 - `mise x python@3.14 uv@0.11.16 -- uv run ruff check .`
+  - pass
+
+## 2026-06-05 Session 1
+
+### Planned
+
+- Add a world-observation collection tool that Tomoko can call without Codex / Computer Use.
+- Reuse the existing Chrome CDP / Perplexity provider path and keep Tomoko DB writes out of this repo.
+- Preserve `research.search` behavior while adding a separate MCP tool.
+
+### Done
+
+- Added `WorldObservationRequest` and `WorldObservationResult`.
+- Added `PerplexityResearchProvider.observe_world()` using the same fresh-tab, submit, wait, and artifact path as research search.
+- Exposed `world.observe` from the stdio MCP server alongside `research.search`.
+- Documented that Tomoko owns frontmatter normalization and `informations/` ingest.
+
+### Verification
+
+- `uv run pytest tests/test_mcp_server.py tests/test_models.py -q`
+  - 17 passed
+- `uv run ruff check src/tomoko_research_operator/models.py src/tomoko_research_operator/perplexity.py src/tomoko_research_operator/mcp_server.py tests/test_mcp_server.py tests/test_models.py`
   - pass
 
 ## 2026-05-31 Session 1

@@ -1,10 +1,11 @@
 # tomoko-research-operator
 
-Local Perplexity research operator for Tomoko.
+Local browser-backed research operator for Tomoko. ChatGPT is the default provider;
+Perplexity remains available as an explicit fallback.
 
 This project is the intentionally messy edge of web research. It can drive a
 logged-in Chrome/Chromium instance through Chrome DevTools Protocol, ask
-Perplexity a question, wait for the answer to settle, and return a structured
+ChatGPT by default, wait for the answer to settle, and return a structured
 result to Tomoko.
 
 Tomoko should see this as an external capability, not as part of its conversation
@@ -13,26 +14,27 @@ state machine.
 ## Shape
 
 ```text
-Tomoko rule detector
+Tomoko rule detector / background job
   -> research.search(query, mode, locale)
+  -> world.observe(prompt, title, observed_at)
   -> tomoko-research-operator
        -> Chrome CDP
-       -> Perplexity UI
+       -> ChatGPT UI (default) / Perplexity UI (optional)
        -> raw artifact
-       -> ResearchResult JSON
+       -> ResearchResult / WorldObservationResult JSON
   -> Tomoko validates and writes DB rows
   -> TomoroSession receives ResearchResultReady
 ```
 
-The first implementation targets Perplexity only. Multi-provider support can
-come later behind the same result model.
+The default implementation targets ChatGPT. Perplexity can be selected for
+comparison or fallback behind the same result model.
 
 ## Requirements
 
 - Python 3.11+
 - `uv`
 - Chrome or Chromium launched with a local debugging port
-- A logged-in Perplexity session in that Chrome profile
+- A logged-in ChatGPT session in that Chrome profile
 
 Example Chrome launch:
 
@@ -55,10 +57,27 @@ uv run pytest
 The early smoke path is CLI-first so Tomoko integration can stay thin:
 
 ```bash
-uv run tomoko-research search "Perplexity API pricing latest" --mode quick
+uv run tomoko-research search "今日の日本の主要ニュース" --mode quick
 ```
 
 Expected output is a single JSON `ResearchResult`.
+
+Use Perplexity explicitly when needed:
+
+```bash
+uv run tomoko-research search "今日の日本の主要ニュース" --provider perplexity
+```
+
+The MCP server also honors `TOMOKO_RESEARCH_PROVIDER=perplexity`; its default
+is `chatgpt`.
+
+## Speakable-answer format
+
+`research.search` adds a provider prompt that asks for a self-contained,
+read-aloud-friendly answer. It keeps URLs, outlet names, and citation markers
+out of the spoken body; for multi-item answers it asks for "what happened" and
+"why it matters" sentences. Structured citations remain separate in
+`ResearchResult.citations`.
 
 ## MCP Boundary
 
@@ -81,8 +100,14 @@ Local stdio server:
 uv run tomoko-research-mcp
 ```
 
-The server exposes one tool, `research.search`, with the same fields as the CLI:
-`query`, `mode`, `locale`, and `recency`.
+The server exposes:
+
+- `research.search`: `query`, `mode`, `locale`, and `recency`.
+- `world.observe`: `prompt`, `title`, `observed_at`, and `locale`.
+
+`world.observe` is for Tomoko's world-observation background/manual collection
+flow. It returns the provider text as a Markdown draft; Tomoko owns adding the
+validated `informations/` frontmatter and running ingest/interpret.
 
 ## License Note
 

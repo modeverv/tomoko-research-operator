@@ -32,7 +32,15 @@
 - [x] Preserve the same `ResearchRequest` / `ResearchResult` DTO.
 - [x] Add a JSON CLI wrapper for local smoke.
 - [x] Preserve full provider text in `ResearchResult.full_text`.
-- [ ] Document Tomoko integration contract.
+- [x] Document Tomoko integration contract.
+
+## Phase 3.5: World Observation Tool
+
+- [x] Expose `world.observe` through the same MCP server.
+- [x] Keep CDP / Perplexity selectors in the provider path.
+- [x] Return `WorldObservationResult.markdown_text` without writing Tomoko DB.
+- [x] Keep Tomoko responsible for `informations/` frontmatter and ingest.
+- [x] Add unit tests for DTO validation and MCP dispatch.
 
 ## Phase 4: Tomoko Integration Plan
 

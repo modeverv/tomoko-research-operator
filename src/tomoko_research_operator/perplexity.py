@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +15,13 @@ from tomoko_research_operator.cdp import (
     ChromeBrowserClient,
     ChromeTarget,
 )
-from tomoko_research_operator.models import Citation, ResearchRequest, ResearchResult
+from tomoko_research_operator.models import (
+    Citation,
+    ResearchRequest,
+    ResearchResult,
+    WorldObservationRequest,
+    WorldObservationResult,
+)
 
 PERPLEXITY_URL = "https://www.perplexity.ai/"
 ASK_INPUT_SELECTOR = 'div#ask-input[contenteditable="true"]'
@@ -62,7 +68,10 @@ def build_prompt(request: ResearchRequest) -> str:
         request.normalized_query(),
         "",
         "回答は日本語で、根拠がある範囲だけを短くまとめてください。",
-        "可能なら出典URLも示してください。",
+        "本文は音声でそのまま読み上げられる原稿にしてください。URL・媒体名・引用記号を入れないでください。",
+        "ニュースや複数項目を挙げる場合は、各項目を「何が起きたか。なぜ重要か。」の順で、"
+        "一文ずつにしてください。",
+        "出典は本文と分け、最後に出典URLだけを列挙してください。",
     ]
     if request.recency:
         lines.append(f"鮮度条件: {request.recency}")
@@ -98,13 +107,14 @@ def snapshot_from_payload(payload: dict[str, Any]) -> PerplexitySnapshot:
     )
     url = str(payload.get("url") or "")
     text = str(payload.get("text") or "").strip()
+    is_generating = bool(payload.get("isGenerating"))
     return PerplexitySnapshot(
         url=url,
         title=str(payload.get("title") or ""),
         text=text,
         html=str(payload.get("html") or ""),
-        is_generating=bool(payload.get("isGenerating")),
-        needs_human_reason=classify_needs_human(url, text),
+        is_generating=is_generating,
+        needs_human_reason=None if is_generating else classify_needs_human(url, text),
         citations=citations,
     )
 
@@ -172,6 +182,9 @@ def _strip_inline_urls(text: str) -> str:
 
 
 class PerplexityResearchProvider:
+    provider_name = "perplexity"
+    provider_url = PERPLEXITY_URL
+
     def __init__(
         self,
         *,
@@ -185,7 +198,7 @@ class PerplexityResearchProvider:
 
     def search(self, request: ResearchRequest) -> ResearchResult:
         request.validate()
-        trace_id = self.artifacts.new_trace_id()
+        trace_id = self.artifacts.new_trace_id(prefix=self.provider_name)
         try:
             target = self._ensure_perplexity_target()
             with CdpSession(
@@ -214,28 +227,117 @@ class PerplexityResearchProvider:
                     text=snapshot.text,
                     citations=snapshot.citations,
                 )
-                return result_from_extracted(
+                return replace(
+                    result_from_extracted(
+                        request,
+                        extracted,
+                        provider_trace_id=trace_id,
+                        raw_artifact_path=str(artifact_path),
+                    ),
+                    provider=self.provider_name,
+                )
+        except CdpTimeoutError as exc:
+            return replace(
+                ResearchResult.failed(request.normalized_query(), str(exc), status="timeout"),
+                provider=self.provider_name,
+            )
+        except (CdpError, OSError, TimeoutError) as exc:
+            return replace(
+                ResearchResult.failed(request.normalized_query(), str(exc), status="failed"),
+                provider=self.provider_name,
+            )
+
+    def observe_world(self, request: WorldObservationRequest) -> WorldObservationResult:
+        request.validate()
+        trace_id = self.artifacts.new_trace_id(prefix=f"{self.provider_name}-world-observation")
+        try:
+            target = self._ensure_perplexity_target()
+            with CdpSession(
+                target.websocket_debugger_url,
+                timeout_sec=self.config.connect_timeout_sec,
+            ) as session:
+                self._prepare_page(session)
+                self._wait_for_composer(session)
+                submit = self._submit_prompt(session, request.normalized_prompt())
+                if not submit.get("ok"):
+                    return replace(
+                        WorldObservationResult.failed(
+                            request.title,
+                            request.observed_at,
+                            str(submit.get("reason") or "could not submit world observation prompt"),
+                            status="needs_human",
+                        ),
+                        provider=self.provider_name,
+                    )
+                snapshot = self._wait_for_response(session)
+                artifact_path = self._write_world_observation_artifact(
+                    trace_id,
                     request,
-                    extracted,
+                    target,
+                    snapshot,
+                )
+                if snapshot.needs_human_reason:
+                    return replace(
+                        WorldObservationResult.failed(
+                            request.title,
+                            request.observed_at,
+                            snapshot.needs_human_reason,
+                            status="needs_human",
+                        ),
+                        provider=self.provider_name,
+                    )
+                text = snapshot.text.strip()
+                if not text:
+                    return replace(
+                        WorldObservationResult.failed(
+                            request.title,
+                            request.observed_at,
+                            "empty response",
+                            status="failed",
+                        ),
+                        provider=self.provider_name,
+                    )
+                return WorldObservationResult(
+                    status="completed",
+                    title=request.title,
+                    observed_at=request.observed_at,
+                    provider=self.provider_name,
+                    markdown_text=text,
                     provider_trace_id=trace_id,
                     raw_artifact_path=str(artifact_path),
                 )
         except CdpTimeoutError as exc:
-            return ResearchResult.failed(request.normalized_query(), str(exc), status="timeout")
+            return replace(
+                WorldObservationResult.failed(
+                    request.title,
+                    request.observed_at,
+                    str(exc),
+                    status="timeout",
+                ),
+                provider=self.provider_name,
+            )
         except (CdpError, OSError, TimeoutError) as exc:
-            return ResearchResult.failed(request.normalized_query(), str(exc), status="failed")
+            return replace(
+                WorldObservationResult.failed(
+                    request.title,
+                    request.observed_at,
+                    str(exc),
+                    status="failed",
+                ),
+                provider=self.provider_name,
+            )
 
     def _ensure_perplexity_target(self) -> ChromeTarget:
         if self.config.fresh_tab_per_request:
-            target = self.browser.open_target(PERPLEXITY_URL)
+            target = self.browser.open_target(self.provider_url)
             self.browser.activate_target(target.id)
             return target
-        return self.browser.ensure_target(PERPLEXITY_URL, PERPLEXITY_URL)
+        return self.browser.ensure_target(self.provider_url, self.provider_url)
 
     def _prepare_page(self, session: CdpSession) -> None:
         info = session.page_info()
-        if not info.get("url", "").startswith(PERPLEXITY_URL):
-            session.navigate(PERPLEXITY_URL, timeout_sec=self.config.navigation_timeout_sec)
+        if not info.get("url", "").startswith(self.provider_url):
+            session.navigate(self.provider_url, timeout_sec=self.config.navigation_timeout_sec)
         else:
             session.wait_for_ready_state(timeout_sec=self.config.navigation_timeout_sec)
 
@@ -291,7 +393,25 @@ class PerplexityResearchProvider:
         return self.artifacts.write_json(
             trace_id,
             {
-                "provider": "perplexity",
+                "provider": self.provider_name,
+                "trace_id": trace_id,
+                "request": request,
+                "target": target,
+                "snapshot": snapshot,
+            },
+        )
+
+    def _write_world_observation_artifact(
+        self,
+        trace_id: str,
+        request: WorldObservationRequest,
+        target: ChromeTarget,
+        snapshot: PerplexitySnapshot,
+    ) -> Path:
+        return self.artifacts.write_json(
+            trace_id,
+            {
+                "provider": self.provider_name,
                 "trace_id": trace_id,
                 "request": request,
                 "target": target,

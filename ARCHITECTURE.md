@@ -11,13 +11,13 @@ own logged-in browser session, while keeping browser fragility outside Tomoko.
 - No TomoroSession state decisions.
 - No LLM tool-calling policy.
 - No general browser automation framework.
-- No guarantee that Perplexity UI automation is stable.
+- No guarantee that ChatGPT or Perplexity UI automation is stable.
 
 ## Components
 
 ```text
 Research MCP-style interface
-  -> PerplexityResearchProvider
+  -> ChatGPTResearchProvider (default) / PerplexityResearchProvider
       -> ChromeCdpClient
       -> PerplexityPage
       -> ResponseExtractor
@@ -61,7 +61,7 @@ pending -> running -> completed
                   -> timeout
 ```
 
-Only one browser job should run at a time at first. Perplexity and Chrome tabs
+Only one browser job should run at a time at first. Provider and Chrome tabs
 are shared mutable UI state; concurrency should be added only after a queue and
 per-job tab ownership are explicit.
 
@@ -74,7 +74,7 @@ change automation behavior.
 The operator should:
 
 - Connect only to `127.0.0.1`.
-- Create a fresh Perplexity tab for each request by default.
+- Create a fresh provider tab for each request by default.
 - Reuse a tab only when explicitly configured for debugging.
 - Activate the selected tab before opening a websocket session.
 - Wait for the page and composer to be ready before inserting the prompt.
@@ -83,7 +83,7 @@ The operator should:
 
 ## Completion Strategy
 
-Perplexity UI completion is not a protocol event. Treat completion as a heuristic:
+Provider UI completion is not a protocol event. Treat completion as a heuristic:
 
 - submit button is no longer a stop button, and
 - response text has stayed unchanged for a short settle window, and
@@ -93,6 +93,16 @@ If these disagree, return `timeout` or `needs_human`, not partial success.
 
 The current implementation also treats login, captcha, blocked, and rate-limit
 markers as `needs_human`.
+
+ChatGPT-specific selectors and completion detection are isolated in `chatgpt.py`;
+Perplexity selectors remain in `perplexity.py`.
+
+## Provider Selection
+
+`chatgpt` is the default for the CLI and MCP server. Set
+`TOMOKO_RESEARCH_PROVIDER=perplexity` or pass `--provider perplexity` to use
+the fallback provider. Both providers return the same result DTO and preserve
+their provider name in the result and raw artifact.
 
 ## MCP Shape
 

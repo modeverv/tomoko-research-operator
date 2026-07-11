@@ -5,7 +5,8 @@ import json
 
 from tomoko_research_operator.artifacts import json_default
 from tomoko_research_operator.models import ResearchRequest
-from tomoko_research_operator.perplexity import PerplexityProviderConfig, PerplexityResearchProvider
+from tomoko_research_operator.perplexity import PerplexityProviderConfig
+from tomoko_research_operator.providers import DEFAULT_PROVIDER, SUPPORTED_PROVIDERS, create_research_provider
 
 
 def main() -> None:
@@ -20,6 +21,7 @@ def main() -> None:
     search.add_argument("--debug-port", type=int, default=9000)
     search.add_argument("--timeout-sec", type=float, default=90.0)
     search.add_argument("--artifacts-dir", default="artifacts")
+    search.add_argument("--provider", choices=SUPPORTED_PROVIDERS, default=DEFAULT_PROVIDER)
 
     args = parser.parse_args()
     if args.command == "search":
@@ -30,7 +32,8 @@ def main() -> None:
             recency=args.recency,
         )
         request.validate()
-        provider = PerplexityResearchProvider(
+        provider = create_research_provider(
+            args.provider,
             config=PerplexityProviderConfig(
                 debug_port=args.debug_port,
                 response_timeout_sec=args.timeout_sec,
